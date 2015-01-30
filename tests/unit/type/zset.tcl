@@ -138,6 +138,18 @@ start_server {tags {"zset"}} {
             assert_equal {a 1 b 2 c 3 d 4} [r zrange ztmp 0 -1 withscores]
         }
 
+        test "ZGTSCORE basics" {
+            r del ztmp
+            r zadd ztmp 1 a
+            r zadd ztmp 2 b
+            r zadd ztmp 3 c
+            r zadd ztmp 4 d
+
+            assert_equal {c d} [r zgtscore ztmp 3]
+            assert_equal {d} [r zgtscore ztmp 4]
+            assert_equal {} [r zgtscore ztmp 5]
+        }
+
         test "ZREVRANGE basics - $encoding" {
             r del ztmp
             r zadd ztmp 1 a
