@@ -2180,3 +2180,80 @@ void zrankCommand(redisClient *c) {
 void zrevrankCommand(redisClient *c) {
     zrankGenericCommand(c, 1);
 }
+
+void zcompscoreGenericCommand(redisClient *c, int reverse) {
+    robj *key = c->argv[1];
+    robj *zobj;
+    long score;
+    void *replylen = NULL;
+    unsigned long rangelen = 0;
+
+    if (getLongFromObjectOrReply(c, c->argv[2], &score, NULL) != REDIS_OK) return;
+
+    if ((zobj = lookupKeyReadOrReply(c,key,shared.emptymultibulk)) == NULL
+         || checkType(c,zobj,REDIS_ZSET)) return;
+
+    /* We don't know in advance how many matching elements there are in the
+     * list, so we push this object that will represent the multi-bulk
+     * length in the output buffer, and will "fix" it later */
+    replylen = addDeferredMultiBulkLength(c);
+
+    if (zobj->encoding == REDIS_ENCODING_ZIPLIST) {
+        unsigned char *zl = zobj->ptr;
+        unsigned char *eptr, *sptr;
+        unsigned char *vstr;
+        unsigned int vlen;
+        long long vlong;
+
+        eptr = ziplistIndex(zl,0);
+        redisAssertWithInfo(c,zobj,eptr != NULL);
+        sptr = ziplistNext(zl,eptr);
+
+        if (eptr != NULL) {
+            while (eptr != NULL) {
+                redisAssertWithInfo(c,zobj,eptr != NULL && sptr != NULL);
+                redisAssertWithInfo(c,zobj,ziplistGet(eptr,&vstr,&vlen,&vlong));
+                // checking score here
+                if (zzlGetScore(sptr) >= score) {
+                    if (vstr == NULL)
+                        addReplyBulkLongLong(c,vlong);
+                    else
+                        addReplyBulkCBuffer(c,vstr,vlen);
+                    rangelen++;
+                }
+                zzlNext(zl,&eptr,&sptr);
+            }
+        }
+
+    } else if (zobj->encoding == REDIS_ENCODING_SKIPLIST) {
+        zset *zs = zobj->ptr;
+        zskiplist *zsl = zs->zsl;
+        zskiplistNode *ln;
+        robj *ele;
+
+        ln = zsl->header->level[0].forward;
+        if (ln != NULL) {
+            while(ln != NULL) {
+                // checking score here
+                if (ln->score >= score) {
+                    ele = ln->obj;
+                    addReplyBulk(c,ele);
+                    rangelen++;
+                }
+                ln = ln->level[0].forward;
+            }
+        }
+    } else {
+        redisPanic("Unknown sorted set encoding");
+    }
+
+    setDeferredMultiBulkLength(c, replylen, rangelen);
+}
+
+void zgtscoreCommand(redisClient *c) {
+    zcompscoreGenericCommand(c, 0);
+} 
+
+
+
+

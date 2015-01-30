@@ -1148,6 +1148,7 @@ void msetnxCommand(redisClient *c);
 void zaddCommand(redisClient *c);
 void zincrbyCommand(redisClient *c);
 void zrangeCommand(redisClient *c);
+void zgtscoreCommand(redisClient *c);
 void zrangebyscoreCommand(redisClient *c);
 void zrevrangebyscoreCommand(redisClient *c);
 void zcountCommand(redisClient *c);
