@@ -113,6 +113,10 @@ struct redisCommand *commandTable;
  * M: Do not automatically propagate the command on MONITOR.
  */
 struct redisCommand redisCommandTable[] = {
+	{"iadd",iaddCommand,-5,"wm",0,NULL,1,1,1,0,0},
+	{"irem",iremCommand,-3,"w",0,NULL,1,1,1,0,0},
+	{"irembystab",irembystabCommand,3,"w",0,NULL,1,1,1,0,0},
+	{"istab",istabCommand,-3,"r",0,NULL,1,1,1,0,0},
     {"get",getCommand,2,"r",0,NULL,1,1,1,0,0},
     {"set",setCommand,-3,"wm",0,noPreloadGetKeys,1,1,1,0,0},
     {"setnx",setnxCommand,3,"wm",0,noPreloadGetKeys,1,1,1,0,0},
@@ -476,6 +480,17 @@ unsigned int dictEncObjHash(const void *key) {
         }
     }
 }
+
+/* iset type hash table */
+dictType isetDictType = {
+    dictEncObjHash,            /* hash function */
+    NULL,                      /* key dup */
+    NULL,                      /* val dup */
+    dictEncObjKeyCompare,      /* key compare */
+    dictRedisObjectDestructor, /* key destructor */
+    NULL                       /* val destructor */
+};
+
 
 /* Sets type hash table */
 dictType setDictType = {

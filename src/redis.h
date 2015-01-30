@@ -128,9 +128,10 @@
 #define REDIS_SET 2
 #define REDIS_ZSET 3
 #define REDIS_HASH 4
+#define REDIS_ISET 5 
 
 /* Objects encoding. Some kind of objects like Strings and Hashes can be
- * internally represented in multiple ways. The 'encoding' field of the object
+ rt_auto_complete)* internally represented in multiple ways. The 'encoding' field of the object
  * is set to one of this fields for this object. */
 #define REDIS_ENCODING_RAW 0     /* Raw representation */
 #define REDIS_ENCODING_INT 1     /* Encoded as integer */
@@ -140,6 +141,7 @@
 #define REDIS_ENCODING_ZIPLIST 5 /* Encoded as ziplist */
 #define REDIS_ENCODING_INTSET 6  /* Encoded as intset */
 #define REDIS_ENCODING_SKIPLIST 7  /* Encoded as skiplist */
+#define REDIS_ENCODING_AVLTREE 8 
 
 /* Defines related to the dump file format. To store 32 bits lengths for short
  * keys requires a lot of space, so we check the most significant 2 bits of
@@ -463,6 +465,26 @@ typedef struct zset {
     zskiplist *zsl;
 } zset;
 
+/* ISET speicalized AVL structures */
+typedef struct avlNode {
+	robj *obj;
+	double scores[2];
+	double subLeftMax, subRightMax;
+	char balance;
+	struct avlNode *left, *right, *parent, *next;
+} avlNode;
+
+typedef struct avl {
+	struct avlNode *root;
+	dict *dict;
+	unsigned long size;
+} avl;
+
+typedef struct iset {
+	avl *avltree;
+	dict *dict;
+} iset;
+
 typedef struct clientBufferLimitsConfig {
     unsigned long long hard_limit_bytes;
     unsigned long long soft_limit_bytes;
@@ -770,6 +792,7 @@ extern dictType dbDictType;
 extern dictType shaScriptObjectDictType;
 extern double R_Zero, R_PosInf, R_NegInf, R_Nan;
 extern dictType hashDictType;
+extern dictType isetDictType;
 
 /*-----------------------------------------------------------------------------
  * Functions prototypes
@@ -862,6 +885,7 @@ void discardTransaction(redisClient *c);
 void flagTransaction(redisClient *c);
 
 /* Redis object implementation */
+robj *createIsetObject(void);
 void decrRefCount(void *o);
 void incrRefCount(robj *o);
 robj *resetRefCount(robj *obj);
@@ -897,6 +921,18 @@ char *strEncoding(int encoding);
 int compareStringObjects(robj *a, robj *b);
 int equalStringObjects(robj *a, robj *b);
 unsigned long estimateObjectIdleTime(robj *o);
+
+/* avl */
+avl *avlCreate(void);
+avlNode *avlCreateNode(double lscore, double rscore, robj *obj);
+void avlFreeNode(avlNode *node, int removeList);
+void avlFree(avl *tree);
+int avlNodeCmp(avlNode *a, avlNode *b);
+void avlLeftRotation(avl *tree, avlNode *locNode);
+void avlRightRotation(avl *rtee, avlNode *locNode);
+void avlResetBalance(avlNode *locNode);
+int avlInsertNode(avl *tree, avlNode *locNode, avlNode *insertNode);
+avlNode *avlInsert(avl *tree, double lscore, double rscore, robj *obj);
 
 /* Synchronous I/O with timeout */
 ssize_t syncWrite(int fd, char *ptr, ssize_t size, long long timeout);
@@ -1061,6 +1097,11 @@ char *redisGitSHA1(void);
 char *redisGitDirty(void);
 
 /* Commands prototypes */
+void iaddCommand(redisClient *c);
+void iremCommand(redisClient *c);
+void irembystabCommand(redisClient *c);
+void istabCommand(redisClient *c);
+
 void authCommand(redisClient *c);
 void pingCommand(redisClient *c);
 void echoCommand(redisClient *c);
