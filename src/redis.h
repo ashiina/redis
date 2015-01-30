@@ -1067,6 +1067,7 @@ char *redisGitSHA1(void);
 char *redisGitDirty(void);
 
 /* Commands prototypes */
+void zaveragescoreCommand(redisClient *c);
 void authCommand(redisClient *c);
 void pingCommand(redisClient *c);
 void echoCommand(redisClient *c);
