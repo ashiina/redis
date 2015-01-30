@@ -1,3 +1,13 @@
+ashiina backs
+----------------------
+Hacking Redis on different branches.
+
+ * branch ashiina/iset:
+    * implemented ISET via tutorial of http://blog.togo.io/how-to/adding-interval-sets-to-redis/ 
+ * branch ashiina/command_zaveragescore
+    * implemented ZAVERAGESCORE command via tutorial of http://www.starkiller.net/2013/05/02/hacking-redis-adding-a-command/
+
+
 Where to find complete Redis documentation?
 -------------------------------------------
 
